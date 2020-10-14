@@ -1,8 +1,10 @@
 import pickle
 import sys
+from typing import List, Any
+
 from PyQt5.QtWidgets import (QWidget, QPushButton,
     QHBoxLayout, QVBoxLayout, QApplication, QLabel,
-    QComboBox, QTextEdit, QLineEdit)
+    QComboBox, QTextEdit, QLineEdit, QDialog)
 from PyQt5.QtCore import Qt
 
 
@@ -16,42 +18,50 @@ class ScoreDB(QWidget):
         self.readScoreDB()
         self.showScoreDB()
 
+
     def initUI(self):
+
         NameLabel = QLabel('Name:',self)
-        NameLine = QLineEdit(self)
+        self.NameLine = QLineEdit(self)
         AgeLabel = QLabel('Age:', self)
-        AgeLine = QLineEdit(self)
+        self.AgeLine = QLineEdit(self)
         ScoreLabel = QLabel('Score:', self)
-        ScoreLine = QLineEdit(self)
+        self.ScoreLine = QLineEdit(self)
 
         hbox1 = QHBoxLayout()
         hbox1.addWidget(NameLabel)
-        hbox1.addWidget(NameLine)
+        hbox1.addWidget(self.NameLine)
         hbox1.addWidget(AgeLabel)
-        hbox1.addWidget(AgeLine)
+        hbox1.addWidget(self.AgeLine)
         hbox1.addWidget(ScoreLabel)
-        hbox1.addWidget(ScoreLine)
+        hbox1.addWidget(self.ScoreLine)
 
         AmountLabel = QLabel('Amount:',self)
-        AmountLine = QLineEdit(self)
+        self.AmountLine = QLineEdit(self)
         KeyLabel = QLabel('Key:',self)
-        KeyComboBox = QComboBox(self)
-        KeyComboBox.addItem('Name')
-        KeyComboBox.addItem('Age')
-        KeyComboBox.addItem('Score')
+        self.KeyComboBox = QComboBox(self)
+        self.KeyComboBox.addItem('Name')
+        self.KeyComboBox.addItem('Age')
+        self.KeyComboBox.addItem('Score')
 
         hbox2 = QHBoxLayout()
         hbox2.addStretch(1)
         hbox2.addWidget(AmountLabel)
-        hbox2.addWidget(AmountLine)
+        hbox2.addWidget(self.AmountLine)
         hbox2.addWidget(KeyLabel)
-        hbox2.addWidget(KeyComboBox)
+        hbox2.addWidget(self.KeyComboBox)
 
         AddButton = QPushButton('Add',self)
         DelButton = QPushButton('Del', self)
         FindButton = QPushButton('Find', self)
         IncButton = QPushButton('Inc', self)
         showButton = QPushButton('show', self)
+
+        AddButton.clicked.connect(self.AddClicked)
+        DelButton.clicked.connect(self.DelClicked)
+        IncButton.clicked.connect(self.IncClicked)
+        FindButton.clicked.connect(self.FindClicked)
+        showButton.clicked.connect(self.showClicked)
 
         hbox3 = QHBoxLayout()
         hbox3.addStretch(1)
@@ -66,10 +76,10 @@ class ScoreDB(QWidget):
         hbox4 = QHBoxLayout()
         hbox4.addWidget(ResultLabel)
 
-        Result = QTextEdit()
+        self.Result = QTextEdit()
 
         hbox5 = QHBoxLayout()
-        hbox5.addWidget(Result)
+        hbox5.addWidget(self.Result)
 
         vbox = QVBoxLayout()
         vbox.addLayout(hbox1)
@@ -86,6 +96,70 @@ class ScoreDB(QWidget):
 
     def closeEvent(self, event):
         self.writeScoreDB()
+
+    def AddClicked(self):
+        name = self.NameLine.text()
+        age = int(self.AgeLine.text())
+        score = int(self.ScoreLine.text())
+
+
+        record = {'Name':name, 'Age':age, 'Score':score}
+        self.scoredb +=[record]
+        self.showScoreDB()
+
+    def DelClicked(self):
+        delname = self.NameLine.text()
+        scdb = self.scoredb
+        self.scoredb = []
+
+        for p in sorted(scdb, key=lambda person: person['Name']):
+            if p['Name'] != delname:
+                self.scoredb += [p]
+
+        self.showScoreDB()
+
+    def FindClicked(self):
+        findname = self.NameLine.text()
+        msg = ""
+        for p in self.scoredb:
+            if p['Name'] != findname:
+                continue
+            for attr in sorted(p):
+                msg += attr + "=" + str(p[attr]) + "    \t"
+            msg += "\n"
+        self.Result.setText(msg)
+    
+    def IncClicked(self):
+        Incname = self.NameLine.text()
+        Amount = int(self.AmountLine.text())
+        scdb = self.scoredb
+        self.scoredb = []
+
+        for p in sorted(scdb, key=lambda person: person['Name']):
+            if p['Name'] == Incname:
+                x = int(p['Score'])
+                x += Amount
+                p['Score'] = x
+                self.scoredb += [p]
+            else:
+                self.scoredb += [p]
+
+        self.showScoreDB()
+
+    def showClicked(self):
+        self.showScoreDB()
+
+    def showScoreDB(self):
+        keyname = str(self.KeyComboBox.currentText())
+        msg = ""
+        keyname = "Name" if not keyname else keyname
+
+        for p in sorted(self.scoredb, key=lambda person: person[keyname]):
+            for attr in sorted(p):
+                msg += attr + "=" +str(p[attr]) + "     \t"
+            msg +="\n"
+        self.Result.setText(msg)
+
 
     def readScoreDB(self):
         try:
@@ -109,11 +183,8 @@ class ScoreDB(QWidget):
         pickle.dump(self.scoredb, fH)
         fH.close()
 
-    def showScoreDB(self):
-        pass
 
-
-if __name__ == '__main__':    
+if __name__ == '__main__':
     app = QApplication(sys.argv)
     ex = ScoreDB()
     sys.exit(app.exec_())
